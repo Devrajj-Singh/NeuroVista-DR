@@ -18,11 +18,11 @@ data/raw/
 data/processed/
 
 # Model artifacts
-models/*.pt
-models/*.pth
-models/*.h5
-models/*.onnx
-models/*.mat
+models/**/*.pt
+models/**/*.pth
+models/**/*.h5
+models/**/*.onnx
+models/**/*.mat
 
 # Local experiment outputs
 outputs/
@@ -38,3 +38,6 @@ Thumbs.db
 
 # MATLAB
 *.asv
+
+# Generated Grad-CAM visualizations
+models/results/gradcam_test.png
