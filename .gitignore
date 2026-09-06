@@ -1,0 +1,40 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+
+# Virtual environments
+.venv/
+venv/
+env/
+
+# Jupyter
+.ipynb_checkpoints/
+
+# Raw datasets
+data/raw/
+
+# Generated / processed datasets
+data/processed/
+
+# Model artifacts
+models/*.pt
+models/*.pth
+models/*.h5
+models/*.onnx
+models/*.mat
+
+# Local experiment outputs
+outputs/
+runs/
+
+# Environment / secrets
+.env
+.env.*
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# MATLAB
+*.asv
