@@ -1,0 +1,119 @@
+{
+  "config": {
+    "seed": 42,
+    "image_size": 224,
+    "batch_size": 16,
+    "learning_rate": 0.0001,
+    "weight_decay": 0.0001,
+    "epochs": 1,
+    "pretrained": true,
+    "freeze_backbone": true,
+    "optimizer": "AdamW",
+    "scheduler": "CosineAnnealingLR",
+    "dataset_split": "C:\\Users\\Devraj\\NeuroVista-DR\\data\\splits\\aptos_split.csv",
+    "device": "cpu"
+  },
+  "epochs": [
+    {
+      "epoch": 1,
+      "train_loss": 1.5425537579919586,
+      "validation_loss": 1.4803625408063696,
+      "learning_rate": 0.0,
+      "evaluation": {
+        "classification": {
+          "accuracy": 0.5841874084919473,
+          "macro_precision": 0.3698661735796115,
+          "macro_recall": 0.37993489497884125,
+          "macro_f1": 0.36165863144018273,
+          "per_class": {
+            "0": {
+              "precision": 0.9080118694362018,
+              "recall": 0.8547486033519553,
+              "f1": 0.8805755395683453,
+              "support": 358
+            },
+            "1": {
+              "precision": 0.21367521367521367,
+              "recall": 0.390625,
+              "f1": 0.27624309392265195,
+              "support": 64
+            },
+            "2": {
+              "precision": 0.4909090909090909,
+              "recall": 0.3103448275862069,
+              "f1": 0.38028169014084506,
+              "support": 174
+            },
+            "3": {
+              "precision": 0.11428571428571428,
+              "recall": 0.22857142857142856,
+              "f1": 0.1523809523809524,
+              "support": 35
+            },
+            "4": {
+              "precision": 0.12244897959183673,
+              "recall": 0.11538461538461539,
+              "f1": 0.1188118811881188,
+              "support": 52
+            }
+          },
+          "confusion_matrix": [
+            [
+              306,
+              28,
+              12,
+              3,
+              9
+            ],
+            [
+              10,
+              25,
+              20,
+              3,
+              6
+            ],
+            [
+              16,
+              41,
+              54,
+              41,
+              22
+            ],
+            [
+              2,
+              8,
+              11,
+              8,
+              6
+            ],
+            [
+              3,
+              15,
+              13,
+              15,
+              6
+            ]
+          ]
+        },
+        "referable_dr": {
+          "threshold": 2,
+          "true_positive": 176,
+          "true_negative": 369,
+          "false_positive": 53,
+          "false_negative": 85,
+          "sensitivity": 0.6743295019157088,
+          "specificity": 0.8744075829383886,
+          "precision": 0.7685589519650655,
+          "recall": 0.6743295019157088,
+          "f1": 0.7183673469387756
+        },
+        "confidence": {
+          "mean": 0.28728182707663685,
+          "minimum": 0.208749920129776,
+          "maximum": 0.5539446473121643
+        },
+        "num_samples": 683
+      }
+    }
+  ]
+}
