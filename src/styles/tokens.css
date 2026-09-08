@@ -1,0 +1,201 @@
+/* ============================================================
+   NeuroVista-DR Design Tokens
+   "Deep Space Medical AI" — Premium dark-first system
+   ============================================================ */
+
+/* ── Dark theme (default / primary) ── */
+:root,
+:root[data-theme='dark'] {
+  /* Background layers */
+  --color-bg: #061522;
+  --color-bg-secondary: #0a2233;
+  --color-surface: rgba(13, 43, 61, 0.55);
+  --color-surface-strong: rgba(13, 43, 61, 0.72);
+  --color-surface-solid: #0d2b3d;
+  --color-surface-elevated: #12384d;
+
+  /* Brand accents */
+  --color-primary: #14b8a6;
+  --color-primary-light: #2dd4bf;
+  --color-primary-dark: #0d9488;
+  --color-secondary: #38ddf8;
+  --color-secondary-light: #7cefe3;
+  --color-secondary-dark: #22b8cf;
+  --color-accent: #38ddf8;
+
+  /* Text hierarchy */
+  --color-text: #f8fafc;
+  --color-text-secondary: #a8bbc8;
+  --color-text-muted: #71889a;
+  --color-text-faint: #4a6275;
+
+  /* Semantic status */
+  --color-success: #22c55e;
+  --color-success-light: rgba(34, 197, 94, 0.14);
+  --color-success-text: #4ade80;
+  --color-warning: #f59e0b;
+  --color-warning-light: rgba(245, 158, 11, 0.14);
+  --color-warning-text: #fbbf24;
+  --color-error: #ef4444;
+  --color-error-light: rgba(239, 68, 68, 0.14);
+  --color-error-text: #f87171;
+  --color-info: #38bdf8;
+  --color-info-light: rgba(56, 189, 248, 0.14);
+  --color-info-text: #7dd3fc;
+
+  /* Borders & glass */
+  --color-border: rgba(56, 221, 248, 0.18);
+  --color-border-subtle: rgba(56, 221, 248, 0.08);
+  --color-border-strong: rgba(56, 221, 248, 0.32);
+
+  /* Glass properties */
+  --glass-bg: rgba(13, 43, 61, 0.55);
+  --glass-bg-strong: rgba(13, 43, 61, 0.72);
+  --glass-blur: 20px;
+  --glass-blur-strong: 28px;
+
+  /* Gradients */
+  --gradient-primary: linear-gradient(135deg, #14b8a6 0%, #38ddf8 100%);
+  --gradient-hero: radial-gradient(circle at 70% 20%, #0d2b3d 0%, #061522 78%);
+  --gradient-surface: radial-gradient(1400px 900px at 20% -10%, #0d2b3d 0%, #061522 60%);
+  --gradient-card: linear-gradient(135deg, rgba(13, 43, 61, 0.55) 0%, rgba(6, 21, 34, 0.6) 100%);
+
+  /* Glow effects */
+  --glow-teal: rgba(20, 184, 166, 0.25);
+  --glow-cyan: rgba(56, 221, 248, 0.20);
+  --glow-primary: 0 0 30px rgba(20, 184, 166, 0.35);
+  --glow-secondary: 0 0 24px rgba(56, 221, 248, 0.25);
+
+  /* Shadows */
+  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.35);
+  --shadow-md: 0 6px 20px rgba(0, 0, 0, 0.45);
+  --shadow-lg: 0 16px 48px rgba(0, 0, 0, 0.55);
+  --shadow-glow: 0 0 30px rgba(20, 184, 166, 0.35);
+}
+
+/* ── Light theme (premium clinical variant) ── */
+:root[data-theme='light'] {
+  /* Background layers */
+  --color-bg: #eef4fb;
+  --color-bg-secondary: #e2ecf6;
+  --color-surface: rgba(255, 255, 255, 0.72);
+  --color-surface-strong: rgba(255, 255, 255, 0.86);
+  --color-surface-solid: #ffffff;
+  --color-surface-elevated: #ffffff;
+
+  --color-primary: #0d9488;
+  --color-primary-light: #0f9c8e;
+  --color-primary-dark: #0f766e;
+  --color-secondary: #0891b2;
+  --color-secondary-light: #06a3c8;
+  --color-secondary-dark: #0e7490;
+  --color-accent: #0ea5b8;
+
+  /* Text hierarchy */
+  --color-text: #0c2136;
+  --color-text-secondary: #3d5872;
+  --color-text-muted: #7390a8;
+  --color-text-faint: #9cb3c6;
+
+  --color-success: #16a34a;
+  --color-success-light: #e6f7ec;
+  --color-success-text: #15803d;
+  --color-warning: #d97706;
+  --color-warning-light: #fef4e4;
+  --color-warning-text: #b45309;
+  --color-error: #dc2626;
+  --color-error-light: #feecec;
+  --color-error-text: #b91c1c;
+  --color-info: #2563eb;
+  --color-info-light: #e8efff;
+  --color-info-text: #1d4ed8;
+
+  --color-border: rgba(13, 148, 136, 0.22);
+  --color-border-subtle: rgba(13, 148, 136, 0.10);
+  --color-border-strong: rgba(13, 148, 136, 0.38);
+
+  --glass-bg: rgba(255, 255, 255, 0.7);
+  --glass-bg-strong: rgba(255, 255, 255, 0.88);
+  --glass-blur: 18px;
+  --glass-blur-strong: 26px;
+
+  --gradient-primary: linear-gradient(135deg, #0d9488 0%, #0891b2 50%, #0ea5b8 100%);
+  --gradient-hero: radial-gradient(circle at 72% 22%, #ffffff 0%, rgba(255,255,255,0) 60%),
+    linear-gradient(135deg, #d7eef6 0%, #eef4fb 45%, #cdeef0 100%);
+  --gradient-surface: radial-gradient(1200px 800px at 15% -10%, #ffffff 0%, #f2f8fd 45%, #e3f2f5 100%);
+  --gradient-card: linear-gradient(160deg, rgba(255, 255, 255, 0.95) 0%, rgba(243, 249, 252, 0.9) 100%);
+
+  --glow-teal: rgba(13, 148, 136, 0.22);
+  --glow-cyan: rgba(8, 145, 178, 0.20);
+  --glow-primary: 0 0 26px rgba(13, 148, 136, 0.32);
+  --glow-secondary: 0 0 20px rgba(8, 145, 178, 0.26);
+
+  --shadow-sm: 0 1px 3px rgba(10, 28, 48, 0.08);
+  --shadow-md: 0 8px 22px rgba(10, 28, 48, 0.12);
+  --shadow-lg: 0 18px 44px rgba(10, 28, 48, 0.18);
+  --shadow-glow: 0 0 26px rgba(13, 148, 136, 0.32);
+}
+
+/* ── Shared layout / type tokens ── */
+:root {
+  --font-family-base: 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto,
+    'Noto Sans', 'Noto Sans Devanagari', sans-serif;
+
+  /* Type scale */
+  --font-size-xs: 0.75rem;
+  --font-size-sm: 0.875rem;
+  --font-size-md: 1rem;
+  --font-size-lg: 1.25rem;
+  --font-size-xl: 1.5rem;
+  --font-size-2xl: 2rem;
+  --font-size-3xl: 2.6rem;
+  --font-size-hero: 3.2rem;
+
+  --font-weight-regular: 400;
+  --font-weight-medium: 500;
+  --font-weight-semibold: 600;
+  --font-weight-bold: 700;
+
+  --line-height-tight: 1.2;
+  --line-height-normal: 1.5;
+  --line-height-loose: 1.7;
+
+  /* Spacing */
+  --space-1: 0.25rem;
+  --space-2: 0.5rem;
+  --space-3: 0.75rem;
+  --space-4: 1rem;
+  --space-5: 1.25rem;
+  --space-6: 1.5rem;
+  --space-8: 2rem;
+  --space-10: 2.5rem;
+  --space-12: 3rem;
+  --space-16: 4rem;
+  --space-20: 5rem;
+  --space-24: 6rem;
+
+  /* Radii */
+  --radius-sm: 0.5rem;
+  --radius-md: 0.75rem;
+  --radius-lg: 1rem;
+  --radius-xl: 1.5rem;
+  --radius-2xl: 2rem;
+  --radius-full: 9999px;
+
+  /* Blur tokens */
+  --blur-sm: 8px;
+  --blur-md: 16px;
+  --blur-lg: 24px;
+
+  /* Timing */
+  --transition-fast: 120ms ease;
+  --transition-normal: 220ms ease;
+  --transition-slow: 350ms ease;
+  --transition-cinematic: 600ms cubic-bezier(0.22, 1, 0.36, 1);
+
+  /* Layout */
+  --container-max: 1200px;
+  --container-pad: 1.5rem;
+  --header-height: 72px;
+  --touch-min: 44px;
+}

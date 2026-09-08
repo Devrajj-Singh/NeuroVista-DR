@@ -11,6 +11,7 @@ from PIL import Image, UnidentifiedImageError
 
 from backend.schemas import AnalysisResponse
 from backend.services.analysis import AnalysisService
+from backend.services.quality import assess_quality
 
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
@@ -50,8 +51,8 @@ def load_models() -> None:
             checkpoint_path=CHECKPOINT_PATH,
         )
     except FileNotFoundError as exc:
-        # Keep the API available for health checks even when the
-        # local model checkpoint is unavailable.
+        # Keep the API available for health checks and image-quality
+        # rejection even when the local model checkpoint is unavailable.
         print(f"WARNING: {exc}")
         analysis_service = None
 
@@ -66,29 +67,8 @@ def health_check() -> dict:
     }
 
 
-@app.post(
-    "/api/v1/analyze",
-    response_model=AnalysisResponse,
-)
-async def analyze_fundus(
-    image: UploadFile = File(...),
-) -> AnalysisResponse:
-    """Analyze an uploaded retinal fundus image."""
-
-    if analysis_service is None:
-        raise HTTPException(
-            status_code=503,
-            detail="AI model is not available.",
-        )
-
-    if not image.content_type or not image.content_type.startswith("image/"):
-        raise HTTPException(
-            status_code=400,
-            detail="Uploaded file must be an image.",
-        )
-
-    image_bytes = await image.read()
-
+def _load_image(image_bytes: bytes) -> Image.Image:
+    """Validate upload bytes and return a decoded PIL image."""
     if not image_bytes:
         raise HTTPException(
             status_code=400,
@@ -104,6 +84,51 @@ async def analyze_fundus(
             detail="Uploaded file is not a valid image.",
         ) from exc
 
+    return pil_image
+
+
+@app.post(
+    "/api/v1/analyze",
+    response_model=AnalysisResponse,
+)
+async def analyze_fundus(
+    image: UploadFile = File(...),
+) -> AnalysisResponse:
+    """Analyze an uploaded retinal fundus image.
+
+    The image-quality gate runs first. A rejected image returns an
+    ``ungradable`` result and the pipeline does not continue to DR
+    classification. Otherwise, classification + Grad-CAM run when the
+    model is available.
+    """
+    if not image.content_type or not image.content_type.startswith("image/"):
+        raise HTTPException(
+            status_code=400,
+            detail="Uploaded file must be an image.",
+        )
+
+    image_bytes = await image.read()
+    pil_image = _load_image(image_bytes)
+
+    # 1. Quality gate — always available, independent of the DR model.
+    quality = assess_quality(pil_image)
+
+    if quality.status == "ungradable":
+        return AnalysisResponse(
+            status="ungradable",
+            quality={
+                "status": "ungradable",
+                "reason": quality.reason,
+            },
+        )
+
+    # 2. DR model stage (loaded at startup when a checkpoint exists).
+    if analysis_service is None:
+        raise HTTPException(
+            status_code=503,
+            detail="AI model is not available.",
+        )
+
     try:
         result = analysis_service.analyze(pil_image)
     except Exception as exc:
@@ -111,8 +136,5 @@ async def analyze_fundus(
             status_code=500,
             detail="Image analysis failed.",
         ) from exc
-
-    # Do not expose internal NumPy heatmap data through the API contract.
-    result.pop("_heatmap", None)
 
     return AnalysisResponse(**result)
