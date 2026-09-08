@@ -39,5 +39,17 @@ Thumbs.db
 # MATLAB
 *.asv
 
+# Frontend / Node
+node_modules/
+dist/
+dist-ssr/
+*.local
+.vite/
+
+# Editor
+.vscode/
+.idea/
+*.swp
+
 # Generated Grad-CAM visualizations
 models/results/gradcam_test.png

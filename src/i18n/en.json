@@ -1,0 +1,218 @@
+{
+  "common": {
+    "analyze": "Analyze",
+    "continue": "Continue",
+    "tryAgain": "Try Again",
+    "cancel": "Cancel",
+    "back": "Back",
+    "loading": "Loading...",
+    "change": "Change"
+  },
+  "language": {
+    "title": "Select your language",
+    "subtitle": "अपनी भाषा चुनें",
+    "english": "English",
+    "hindi": "हिन्दी",
+    "chooseLanguage": "Choose a language to continue"
+  },
+  "home": {
+    "badge": "AI-Powered Retinal Screening",
+    "title": "Intelligent Retinal Screening for Early Detection",
+    "subtitle": "NeuroVista-DR uses advanced AI to analyze fundus images and help detect diabetic retinopathy early — supporting doctors with fast, explainable screening results.",
+    "start": "Start Screening",
+    "learn": "View Workflow",
+    "secondaryInfo": "AI-assisted screening tool — not a diagnostic device. For ophthalmologist review.",
+    "workflow": {
+      "title": "How It Works",
+      "1": {
+        "title": "Upload Fundus Image",
+        "desc": "Capture or upload a photo of the back of the eye taken by a fundus camera."
+      },
+      "2": {
+        "title": "AI Analysis",
+        "desc": "The system checks image quality and analyzes the retina for signs of diabetic retinopathy."
+      },
+      "3": {
+        "title": "Screening Result",
+        "desc": "Receive a DR grade, severity and referral recommendation with confidence score."
+      },
+      "4": {
+        "title": "Explanation & Report",
+        "desc": "Review model explanations and a printable clinical screening report."
+      }
+    }
+  },
+  "brand": {
+    "name": "NeuroVista-DR",
+    "tagline": "AI-assisted retinal screening",
+    "disclaimer": "AI-assisted screening tool — not a diagnostic device. For ophthalmologist review."
+  },
+  "upload": {
+    "title": "Upload a fundus image",
+    "description": "A photo of the back of the eye (retina) taken by a fundus camera.",
+    "dragDrop": "Drag and drop your image here",
+    "or": "or",
+    "browse": "Browse Files",
+    "supportedFormats": "Supported formats: JPG, JPEG, PNG (max 10 MB)",
+    "selectedFile": "Selected file",
+    "changeImage": "Change Image",
+    "removeImage": "Remove Image",
+    "invalidType": "This file type is not supported. Please upload a JPG, JPEG, or PNG image.",
+    "invalidSize": "This file is too large. The maximum size is 10 MB.",
+    "fileInfo": "File info"
+  },
+  "preview": {
+    "title": "Image preview",
+    "filename": "Filename",
+    "size": "Size",
+    "description": "Review the image before starting the analysis."
+  },
+  "processing": {
+    "title": "Analyzing your image",
+    "pleaseWait": "Please wait, this takes a few seconds.",
+    "checkingQuality": "Checking image quality",
+    "analyzingRetina": "Analyzing retinal image",
+    "generatingExplanation": "Generating explanation",
+    "complete": "Analysis complete"
+  },
+  "quality": {
+    "headingGood": "Image quality: Good",
+    "headingUnsuitable": "Image quality: Unsuitable",
+    "good": "The image quality is good. Proceeding with the analysis.",
+    "unsuitable": "This image cannot be analyzed.",
+    "recapture": "Please recapture the fundus image and try again.",
+    "whyBlurry": "The image is too blurry.",
+    "whyDark": "The image is too dark.",
+    "whyFieldOfView": "The field of view is poor.",
+    "whyInsufficient": "The image quality is insufficient.",
+    "recaptureButton": "Recapture Image",
+    "proceeding": "Good image quality — proceeding with analysis"
+  },
+  "result": {
+    "title": "Screening result",
+    "drGrade": "DR Grade",
+    "severity": "Severity",
+    "referral": "Referral",
+    "confidence": "Confidence",
+    "referable": "Referral Recommended",
+    "nonReferable": "No Referral Needed",
+    "referableHint": "Referable — ophthalmologist review recommended",
+    "nonReferableHint": "Non-referable at this time",
+    "screeningResultNote": "Screening result — ophthalmologist review recommended.",
+    "notDiagnosis": "This is an AI-assisted screening result, not a diagnosis. Please consult an ophthalmologist for formal evaluation.",
+    "viewExplanation": "View Model Explanation",
+    "viewReport": "View Full Report",
+    "overallResult": "Overall Screening Result",
+    "backToResult": "Back to Result",
+    "rotateHint": "Drag to rotate — explore retinal structures in 3D",
+    "home": "Back to Home",
+    "severityScale": "Severity scale"
+  },
+  "icdr": {
+    "gradeLabel": "Grade",
+    "grade0": "No apparent retinopathy",
+    "grade1": "Mild NPDR",
+    "grade2": "Moderate NPDR",
+    "grade3": "Severe NPDR",
+    "grade4": "Proliferative DR"
+  },
+  "gradcam": {
+    "title": "Model explanation",
+    "subtitle": "Highlighted regions indicate areas contributing to the model's screening result.",
+    "originalImage": "Original Image",
+    "modelExplanation": "Model Explanation",
+    "unavailable": "Visual explanation is currently unavailable.",
+    "unavailableHint": "The screening result is still available, but the visual explanation could not be generated.",
+    "overlayOpacity": "Overlay opacity",
+    "notDiagnosis": "This is a model explanation visualization, not a diagnosis."
+  },
+  "report": {
+    "title": "Retinal Screening Report",
+    "brandLine": "NEUROVISTA-DR",
+    "subtitle": "AI-assisted retinal screening report",
+    "imageQuality": "Image Quality",
+    "drGrade": "DR Grade",
+    "severity": "Severity",
+    "referralStatus": "Referral Status",
+    "confidence": "Confidence",
+    "modelExplanation": "Model Explanation",
+    "gradcamAvailable": "Grad-CAM available",
+    "gradcamUnavailable": "Grad-CAM unavailable",
+    "recommendation": "Recommendation",
+    "recommendationText": "Please consult an ophthalmologist for further evaluation.",
+    "disclaimer": "This is an AI-assisted screening report. It is not a diagnosis. Decisions about care should be made by a qualified healthcare professional.",
+    "analyzeAnother": "Analyze Another Image",
+    "print": "Print Report"
+  },
+  "error": {
+    "title": "Unable to analyze the image",
+    "description": "Something went wrong while analyzing the image. Please try again.",
+    "tryAgain": "Try Again",
+    "chooseAnother": "Choose Another Image",
+    "networkError": "Network error. Please check your connection."
+  },
+  "nav": {
+    "menu": "Navigation menu",
+    "home": "Home",
+    "explore": "Explore",
+    "history": "History"
+  },
+  "explore": {
+    "title": "Explore Eye Anatomy",
+    "subtitle": "Interact with a detailed 3D model of the human eye. Rotate, zoom, isolate structures and switch to internal view.",
+    "loading": "Loading 3D anatomy…",
+    "disclaimer": "Educational 3D visualization — not a diagnostic representation."
+  },
+  "history": {
+    "title": "Screening History",
+    "subtitle": "Review your previous screening results.",
+    "clear": "Clear history",
+    "empty": "No screening results yet. Run a screening to see it here.",
+    "noPreview": "No saved image"
+  },
+  "eye": {
+    "fullEye": "Full Eye",
+    "anatomy": "Anatomy",
+    "show": "Show",
+    "hide": "Hide",
+    "internalView": "Internal view",
+    "showLabels": "Show labels",
+    "explodeView": "Explode view",
+    "focusStructure": "Focus structure",
+    "close": "Close",
+    "selected": "Selected",
+    "unavailable": "Unavailable",
+    "instruction": "Drag to rotate · Scroll to zoom · Select a structure to explore",
+    "explodeLabel": "Explode separation",
+    "camera": {
+      "controls": "Camera controls",
+      "zoomIn": "Zoom in",
+      "zoomOut": "Zoom out"
+    },
+    "fallbackTitle": "3D Anatomy View is unavailable on this device",
+    "fallbackText": "Your browser or device does not support WebGL. The rest of the screening application continues to work normally.",
+    "presets": {
+      "front": "Front",
+      "back": "Back",
+      "left": "Left",
+      "right": "Right",
+      "top": "Top",
+      "bottom": "Bottom",
+      "reset": "Reset"
+    },
+    "structures": {
+      "sclera": "Sclera",
+      "cornea": "Cornea",
+      "iris": "Iris",
+      "pupil": "Pupil",
+      "lens": "Lens",
+      "vitreous": "Vitreous Body",
+      "retina": "Retina",
+      "choroid": "Choroid",
+      "macula": "Macula",
+      "opticDisc": "Optic Disc",
+      "opticNerve": "Optic Nerve",
+      "vessels": "Retinal Vessels"
+    }
+  }
+}
