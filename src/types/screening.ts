@@ -44,6 +44,8 @@ export interface Probabilities {
 
 export interface Explainability {
   gradcam_available: boolean;
+  /** Grad-CAM overlay PNG as a data URL (present when available). */
+  heatmap_image?: string;
 }
 
 export interface AnalysisResult {

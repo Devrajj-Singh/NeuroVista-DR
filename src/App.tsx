@@ -130,6 +130,7 @@ export function ScreeningDashboard() {
             prediction={state.prediction}
             previewUrl={state.imagePreviewUrl ?? ''}
             gradcamAvailable={state.explanation?.gradcam_available === true}
+            heatmapImage={state.explanation?.heatmap_image}
             onHome={goHome}
             onViewExplanation={() =>
               navigate(state.explanation?.gradcam_available ? 'GRADCAM' : 'GRADCAM_UNAVAILABLE')

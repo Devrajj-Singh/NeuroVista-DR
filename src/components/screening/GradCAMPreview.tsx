@@ -4,18 +4,27 @@ import { useLocalization } from '@/i18n';
 type GradCAMPreviewProps = {
   previewUrl: string;
   available: boolean;
+  /** Real Grad-CAM overlay PNG data URL returned by the backend. */
+  heatmapImage?: string;
 };
 
-export function GradCAMPreview({ previewUrl, available }: GradCAMPreviewProps) {
+export function GradCAMPreview({
+  previewUrl,
+  available,
+  heatmapImage,
+}: GradCAMPreviewProps) {
   const { t } = useLocalization();
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const overlayRef = useRef<HTMLDivElement>(null);
   const imgRef = useRef<HTMLImageElement>(null);
 
   useEffect(() => {
+    // Skip the simulated overlay when a real backend heatmap is provided.
+    if (heatmapImage || !available || !overlayRef.current) return;
+
     const overlay = overlayRef.current;
     const img = imgRef.current;
-    if (!available || !overlay || !img) return;
+    if (!img) return;
 
     const drawOverlay = () => {
       const canvas = canvasRef.current;
@@ -60,12 +69,14 @@ export function GradCAMPreview({ previewUrl, available }: GradCAMPreviewProps) {
     observer.observe(overlay);
     resize();
     return () => observer.disconnect();
-  }, [available]);
+  }, [available, heatmapImage]);
 
   return (
     <div className="gradcam-preview">
       <div className="fundus-viewer">
-        {previewUrl ? (
+        {heatmapImage ? (
+          <img src={heatmapImage} alt={t('gradcam.heatmap')} className="fundus-viewer__img" />
+        ) : previewUrl ? (
           <img
             ref={imgRef}
             src={previewUrl}
@@ -75,7 +86,7 @@ export function GradCAMPreview({ previewUrl, available }: GradCAMPreviewProps) {
         ) : (
           <div className="fundus-viewer__placeholder">{t('history.noPreview')}</div>
         )}
-        {available && (
+        {!heatmapImage && available && (
           <div className="gradcam-overlay" ref={overlayRef}>
             <canvas ref={canvasRef} className="gradcam-overlay__canvas" />
           </div>

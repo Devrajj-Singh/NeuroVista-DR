@@ -210,9 +210,16 @@ export function useScreening() {
         }
 
         dispatch({ type: 'SET_RESULT', payload: result });
-      } catch {
+      } catch (err) {
         if (cancelled) return;
-        dispatch({ type: 'SET_ERROR', payload: 'error.networkError' });
+        const code = err instanceof Error ? err.message : typeof err === 'string' ? err : '';
+        const message =
+          code === 'network-error'
+            ? 'error.networkError'
+            : code === 'analysis-error' || code === 'request-error'
+              ? 'error.serverError'
+              : 'error.networkError';
+        dispatch({ type: 'SET_ERROR', payload: message });
       }
     }
 

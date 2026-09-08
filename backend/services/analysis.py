@@ -2,12 +2,15 @@
 
 from __future__ import annotations
 
+import base64
+import io
 from pathlib import Path
 
 import numpy as np
 import torch
 from PIL import Image
 
+from backend.services.quality import QualityResult, assess_quality
 from src.ai.classification.config import (
     CLASS_NAMES,
     IMAGE_SIZE,
@@ -15,7 +18,16 @@ from src.ai.classification.config import (
 )
 from src.ai.classification.model import build_model, get_device
 from src.ai.classification.preprocessing import get_validation_transform
-from src.ai.explainability.gradcam import GradCAM
+from src.ai.explainability.gradcam import GradCAM, create_overlay
+
+
+def heatmap_to_data_url(overlay: np.ndarray) -> str:
+    """Encode an RGB overlay array as a PNG data URL for the frontend."""
+    image = Image.fromarray(overlay.astype(np.uint8))
+    buffer = io.BytesIO()
+    image.save(buffer, format="PNG")
+    encoded = base64.b64encode(buffer.getvalue()).decode("ascii")
+    return f"data:image/png;base64,{encoded}"
 
 
 class AnalysisService:
@@ -23,6 +35,9 @@ class AnalysisService:
 
     The classification model is loaded once when the service is created
     instead of being reloaded for every API request.
+
+    The service first runs an image-quality gate. If an image is rejected
+    as ungradable, classification and Grad-CAM are **not** executed.
     """
 
     def __init__(
@@ -79,10 +94,31 @@ class AnalysisService:
         self,
         image: Image.Image,
     ) -> dict:
-        """Run ICDR classification and Grad-CAM analysis."""
+        """Run the quality gate, then ICDR classification and Grad-CAM.
 
+        Returns a dict matching the API contract. When the image is
+        rejected, the result carries ``status="ungradable"`` with a quality
+        reason and no prediction/explainability.
+        """
+        # 1. Quality gate — reject before any classification.
+        quality: QualityResult = assess_quality(image)
+
+        if quality.status == "ungradable":
+            return {
+                "status": "ungradable",
+                "quality": {
+                    "status": "ungradable",
+                    "reason": quality.reason,
+                },
+                "prediction": None,
+                "probabilities": None,
+                "explainability": None,
+            }
+
+        # 2. Preprocessing.
         input_tensor = self._prepare_image(image)
 
+        # 3. DR classification + Grad-CAM.
         heatmap, _, probabilities = self.gradcam.generate(
             input_tensor=input_tensor,
         )
@@ -95,18 +131,32 @@ class AnalysisService:
             for class_index, probability in enumerate(probabilities)
         }
 
+        # 4. Referable DR decision.
+        referable = predicted_class >= REFERABLE_DR_THRESHOLD
+
+        # 5. Visual Grad-CAM overlay, returned to the frontend.
+        overlay = create_overlay(
+            image=image.convert("RGB"),
+            heatmap=heatmap,
+            alpha=0.4,
+        )
+        heatmap_image = heatmap_to_data_url(overlay)
+
         return {
             "status": "success",
+            "quality": {
+                "status": "good",
+                "reason": None,
+            },
             "prediction": {
                 "icdr_grade": predicted_class,
                 "class_name": CLASS_NAMES[predicted_class],
                 "confidence": confidence,
-                "referable_dr": predicted_class >= REFERABLE_DR_THRESHOLD,
+                "referable_dr": referable,
             },
             "probabilities": probability_dict,
             "explainability": {
                 "gradcam_available": True,
+                "heatmap_image": heatmap_image,
             },
-            # Keep this available internally for the next stage.
-            "_heatmap": heatmap,
         }

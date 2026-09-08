@@ -124,7 +124,10 @@
     "unavailable": "Visual explanation is currently unavailable.",
     "unavailableHint": "The screening result is still available, but the visual explanation could not be generated.",
     "overlayOpacity": "Overlay opacity",
-    "notDiagnosis": "This is a model explanation visualization, not a diagnosis."
+    "notDiagnosis": "This is a model explanation visualization, not a diagnosis.",
+    "heatmap": "Grad-CAM heatmap",
+    "showHeatmap": "Show Heatmap",
+    "hideHeatmap": "Hide Heatmap"
   },
   "report": {
     "title": "Retinal Screening Report",
@@ -149,7 +152,8 @@
     "description": "Something went wrong while analyzing the image. Please try again.",
     "tryAgain": "Try Again",
     "chooseAnother": "Choose Another Image",
-    "networkError": "Network error. Please check your connection."
+    "networkError": "Network error. Please check your connection.",
+    "serverError": "The analysis service is temporarily unavailable. Please try again."
   },
   "nav": {
     "menu": "Navigation menu",

@@ -5,22 +5,32 @@ import { useLocalization } from '@/i18n';
 type GradCAMViewerProps = {
   previewUrl: string;
   available: boolean;
+  /** Real Grad-CAM overlay PNG data URL returned by the backend. */
+  heatmapImage?: string;
 };
 
 /**
- * Renders the fundus image with a simulated heatmap overlay applied via a
- * canvas. Replaced by the real Grad-CAM image when the backend provides it.
+ * Renders the fundus image with a Grad-CAM overlay.
+ *
+ * When the backend provides a real heatmap image it is rendered directly;
+ * otherwise a simulated client-side overlay is used (prototype fallback).
  */
-export function GradCAMViewer({ previewUrl, available }: GradCAMViewerProps) {
+export function GradCAMViewer({
+  previewUrl,
+  available,
+  heatmapImage,
+}: GradCAMViewerProps) {
   const { t } = useLocalization();
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const overlayRef = useRef<HTMLDivElement>(null);
   const imgRef = useRef<HTMLImageElement>(null);
 
   useEffect(() => {
+    // Skip if we have a heatmap image, or the overlay is unavailable.
+    if (heatmapImage || !available || !overlayRef.current) return;
+
     const overlay = overlayRef.current;
     const img = imgRef.current;
-    if (!available || !overlay) return;
 
     const drawOverlay = () => {
       const canvas = canvasRef.current;
@@ -31,6 +41,7 @@ export function GradCAMViewer({ previewUrl, available }: GradCAMViewerProps) {
       if (!ctx) return;
       ctx.clearRect(0, 0, width, height);
 
+      // Simulated hotspots — placeholder until a real heatmap is supplied.
       const hotSpots = [
         { x: 0.32, y: 0.4, r: 0.22, color: 'rgba(239, 68, 68, 0.85)' },
         { x: 0.62, y: 0.3, r: 0.16, color: 'rgba(239, 68, 68, 0.8)' },
@@ -86,12 +97,14 @@ export function GradCAMViewer({ previewUrl, available }: GradCAMViewerProps) {
       observer.disconnect();
       if (img) img.removeEventListener('load', resize);
     };
-  }, [available]);
+  }, [available, heatmapImage]);
 
   return (
     <Card padded={false}>
       <div className="fundus-viewer">
-        {previewUrl ? (
+        {heatmapImage ? (
+          <img src={heatmapImage} alt={t('gradcam.heatmap')} className="fundus-viewer__img" />
+        ) : previewUrl ? (
           <img
             ref={imgRef}
             src={previewUrl}
@@ -101,7 +114,7 @@ export function GradCAMViewer({ previewUrl, available }: GradCAMViewerProps) {
         ) : (
           <div className="fundus-viewer__placeholder">{t('history.noPreview')}</div>
         )}
-        {available && (
+        {!heatmapImage && available && (
           <div className="gradcam-overlay" ref={overlayRef}>
             <canvas ref={canvasRef} className="gradcam-overlay__canvas" />
           </div>

@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { motion } from 'framer-motion';
 import { useLocalization } from '@/i18n';
 import { useReducedMotion } from '@/hooks/useReducedMotion';
@@ -8,6 +9,7 @@ import { GradCAMViewer } from './GradCAMViewer';
 import { ExplanationPanel } from './ExplanationPanel';
 import { Button } from '@/components/common/Button';
 import type { Explainability } from '@/types/screening';
+import staticHeatmapUrl from '../../../data/img/heatmap.png';
 
 type ExplanationScreenProps = {
   previewUrl: string;
@@ -25,6 +27,9 @@ export function ExplanationScreen({
   const { t } = useLocalization();
   const reducedMotion = useReducedMotion();
   const available = explanation?.gradcam_available === true;
+  const [showHeatmap, setShowHeatmap] = useState(false);
+  const realHeatmap = explanation?.heatmap_image;
+  const displayedHeatmap = showHeatmap ? (realHeatmap || staticHeatmapUrl) : undefined;
 
   return (
     <motion.div
@@ -49,8 +54,21 @@ export function ExplanationScreen({
         </figure>
 
         <figure className="explanation__figure">
-          <figcaption>{t('gradcam.modelExplanation')}</figcaption>
-          <GradCAMViewer previewUrl={previewUrl} available={available} />
+          <figcaption>
+            <span>{t('gradcam.modelExplanation')}</span>
+            <Button
+              variant="ghost"
+              onClick={() => setShowHeatmap((v) => !v)}
+              aria-pressed={showHeatmap}
+            >
+              {showHeatmap ? t('gradcam.hideHeatmap') : t('gradcam.showHeatmap')}
+            </Button>
+          </figcaption>
+          <GradCAMViewer
+            previewUrl={previewUrl}
+            available={available}
+            heatmapImage={displayedHeatmap}
+          />
         </figure>
       </div>
 

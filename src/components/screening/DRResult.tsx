@@ -13,6 +13,7 @@ type DRResultProps = {
   prediction: Prediction;
   previewUrl: string;
   gradcamAvailable: boolean;
+  heatmapImage?: string;
   onHome: () => void;
   onViewExplanation: () => void;
   onViewReport: () => void;
@@ -26,6 +27,7 @@ export function DRResult({
   prediction,
   previewUrl,
   gradcamAvailable,
+  heatmapImage,
   onHome,
   onViewExplanation,
   onViewReport,
@@ -147,7 +149,7 @@ export function DRResult({
                 {gradcamAvailable ? 'Grad-CAM' : t('eye.unavailable')}
               </span>
             </div>
-            <GradCAMPreview previewUrl={previewUrl} available={gradcamAvailable} />
+            <GradCAMPreview previewUrl={previewUrl} available={gradcamAvailable} heatmapImage={heatmapImage} />
           </div>
         </Card>
 
