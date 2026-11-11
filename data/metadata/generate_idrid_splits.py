@@ -1,349 +1,142 @@
 from pathlib import Path
 import csv
-import random
-from collections import Counter, defaultdict
+import hashlib
+from collections import Counter
 
+from sklearn.model_selection import train_test_split
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 
-MANIFEST = PROJECT_ROOT / "data" / "metadata" / "idrid_manifest.csv"
-OUTPUT = PROJECT_ROOT / "data" / "metadata" / "idrid_project_split.csv"
-
-SEED = 42
-TRAIN_RATIO = 0.80
+MANIFEST_PATH = PROJECT_ROOT / "data" / "metadata" / "idrid_manifest.csv"
+OUTPUT_PATH = PROJECT_ROOT / "data" / "metadata" / "idrid_project_split.csv"
 
 
-def load_manifest():
-    with MANIFEST.open("r", encoding="utf-8", newline="") as f:
-        return list(csv.DictReader(f))
+def get_file_hash(file_path):
+    digest = hashlib.sha256()
+
+    with open(file_path, "rb") as file:
+        for chunk in iter(lambda: file.read(8192), b""):
+            digest.update(chunk)
+
+    return digest.hexdigest()
 
 
 def main():
-    records = load_manifest()
+    with open(MANIFEST_PATH, "r", newline="", encoding="utf-8") as file:
+        reader = csv.DictReader(file)
+        manifest = list(reader)
 
-    print(f"Manifest records: {len(records)}")
-
-    # ------------------------------------------------------------
-    # 1. Identify every duplicate SHA-256 group.
-    #
-    #    Any duplicate image is excluded from the clean project
-    #    split, even when its labels agree.
-    #
-    #    This prevents duplicate-image leakage between train and
-    #    validation and avoids relying on duplicated observations.
-    # ------------------------------------------------------------
-
-    hash_groups = defaultdict(list)
-
-    for record in records:
-        hash_groups[record["sha256"]].append(record)
-
-    duplicate_groups = {
-        file_hash: group
-        for file_hash, group in hash_groups.items()
-        if len(group) > 1
+    required_columns = {
+        "image_id",
+        "path",
+        "retinopathy_grade",
+        "split"
     }
 
-    duplicate_records = {
-        id(record): record
-        for group in duplicate_groups.values()
-        for record in group
-    }
+    if not manifest or not required_columns.issubset(manifest[0].keys()):
+        raise ValueError("Manifest is missing required columns.")
 
-    print(f"Duplicate groups: {len(duplicate_groups)}")
-    print(
-        f"Records belonging to duplicate groups: "
-        f"{len(duplicate_records)}"
-    )
-
-    # ------------------------------------------------------------
-    # 2. Build clean candidate set.
-    # ------------------------------------------------------------
-
-    candidates = []
-    excluded = []
-
-    for record in records:
-
-        if id(record) in duplicate_records:
-            record["project_split"] = "excluded"
-
-            if record["cross_split_duplicate"] == "yes":
-                record["exclusion_reason"] = (
-                    "duplicate_image_cross_split"
-                )
-            elif record["conflicting_duplicate_label"] == "yes":
-                record["exclusion_reason"] = (
-                    "duplicate_image_conflicting_label"
-                )
-            else:
-                record["exclusion_reason"] = (
-                    "duplicate_image"
-                )
-
-            excluded.append(record)
-
-        else:
-            candidates.append(record)
-
-    print(f"Clean candidate records: {len(candidates)}")
-    print(f"Excluded records: {len(excluded)}")
-
-    # ------------------------------------------------------------
-    # 3. Verify that every candidate SHA-256 is unique.
-    # ------------------------------------------------------------
-
-    candidate_hashes = [
-        record["sha256"]
-        for record in candidates
+    official_training = [
+        row for row in manifest
+        if row["split"].strip().lower() in ("training", "train")
     ]
 
-    if len(candidate_hashes) != len(set(candidate_hashes)):
-        raise RuntimeError(
-            "Duplicate SHA-256 hashes remain in the candidate set."
-        )
+    official_testing = len(manifest) - len(official_training)
 
-    print("Candidate uniqueness check: PASS")
+    print("Official training records:", len(official_training))
+    print("Official testing records excluded:", official_testing)
 
-    # ------------------------------------------------------------
-    # 4. Validate DR labels.
-    # ------------------------------------------------------------
+    unique_records = []
+    seen_hashes = set()
 
-    for record in candidates:
-        if record["retinopathy_grade"] == "":
-            raise RuntimeError(
-                f"Missing DR grade for {record['image_id']}"
-            )
+    for row in official_training:
+        image_path = Path(row["path"])
 
-    # ------------------------------------------------------------
-    # 5. Stratified train/validation split by DR grade.
-    # ------------------------------------------------------------
+        if not image_path.is_absolute():
+            image_path = PROJECT_ROOT / image_path
 
-    grade_groups = defaultdict(list)
+        if not image_path.exists():
+            raise FileNotFoundError(f"Image not found: {image_path}")
 
-    for record in candidates:
-        grade_groups[
-            record["retinopathy_grade"]
-        ].append(record)
+        image_hash = get_file_hash(image_path)
 
-    rng = random.Random(SEED)
+        if image_hash not in seen_hashes:
+            seen_hashes.add(image_hash)
 
-    train_records = []
-    validation_records = []
+            updated_row = row.copy()
+            updated_row["path"] = image_path.relative_to(PROJECT_ROOT).as_posix()
+            unique_records.append(updated_row)
 
-    for grade in sorted(grade_groups):
+    print("Duplicate images excluded:",
+          len(official_training) - len(unique_records))
+    print("Unique training images:", len(unique_records))
 
-        group = grade_groups[grade]
+    grades = [
+        row["retinopathy_grade"]
+        for row in unique_records
+    ]
 
-        rng.shuffle(group)
-
-        if len(group) == 1:
-            train_count = 1
-        else:
-            train_count = round(
-                len(group) * TRAIN_RATIO
-            )
-
-            train_count = max(
-                1,
-                min(
-                    train_count,
-                    len(group) - 1,
-                ),
-            )
-
-        train_records.extend(
-            group[:train_count]
-        )
-
-        validation_records.extend(
-            group[train_count:]
-        )
-
-    # ------------------------------------------------------------
-    # 6. Assign split names.
-    # ------------------------------------------------------------
-
-    train_paths = {
-        record["path"]
-        for record in train_records
-    }
-
-    validation_paths = {
-        record["path"]
-        for record in validation_records
-    }
+    train_records, validation_records = train_test_split(
+        unique_records,
+        test_size=0.20,
+        random_state=42,
+        stratify=grades
+    )
 
     output_records = []
 
-    for record in records:
+    for row in train_records:
+        output_records.append({
+            "image_id": row["image_id"],
+            "path": row["path"],
+            "retinopathy_grade": row["retinopathy_grade"],
+            "project_split": "train"
+        })
 
-        output = dict(record)
-
-        # Remove internal fields if present.
-        output.pop("_absolute_path", None)
-        output.pop("project_status", None)
-
-        if record["path"] in train_paths:
-            output["project_split"] = "train"
-            output["exclusion_reason"] = ""
-
-        elif record["path"] in validation_paths:
-            output["project_split"] = "validation"
-            output["exclusion_reason"] = ""
-
-        else:
-            output["project_split"] = "excluded"
-
-            if record["cross_split_duplicate"] == "yes":
-                output["exclusion_reason"] = (
-                    "duplicate_image_cross_split"
-                )
-            elif record["conflicting_duplicate_label"] == "yes":
-                output["exclusion_reason"] = (
-                    "duplicate_image_conflicting_label"
-                )
-            else:
-                output["exclusion_reason"] = (
-                    "duplicate_image"
-                )
-
-        output_records.append(output)
-
-    # ------------------------------------------------------------
-    # 7. Final leakage check.
-    # ------------------------------------------------------------
-
-    split_hashes = defaultdict(set)
-
-    for record in output_records:
-
-        split = record["project_split"]
-
-        if split in {"train", "validation"}:
-            split_hashes[split].add(
-                record["sha256"]
-            )
-
-    leakage = (
-        split_hashes["train"]
-        & split_hashes["validation"]
-    )
-
-    if leakage:
-        raise RuntimeError(
-            "DATA LEAKAGE DETECTED: "
-            "identical SHA-256 hashes exist in both "
-            "train and validation."
-        )
-
-    print("Train/validation SHA-256 leakage check: PASS")
-
-    # ------------------------------------------------------------
-    # 8. Write project split manifest.
-    # ------------------------------------------------------------
+    for row in validation_records:
+        output_records.append({
+            "image_id": row["image_id"],
+            "path": row["path"],
+            "retinopathy_grade": row["retinopathy_grade"],
+            "project_split": "validation"
+        })
 
     fieldnames = [
         "image_id",
-        "split",
         "path",
-        "sha256",
-        "width",
-        "height",
-        "channels",
         "retinopathy_grade",
-        "macular_edema_grade",
-        "duplicate_group",
-        "cross_split_duplicate",
-        "conflicting_duplicate_label",
-        "validation_status",
-        "project_split",
-        "exclusion_reason",
+        "project_split"
     ]
 
-    with OUTPUT.open(
-        "w",
-        encoding="utf-8",
-        newline="",
-    ) as f:
-
-        writer = csv.DictWriter(
-            f,
-            fieldnames=fieldnames,
-        )
-
+    with open(OUTPUT_PATH, "w", newline="", encoding="utf-8") as file:
+        writer = csv.DictWriter(file, fieldnames=fieldnames)
         writer.writeheader()
+        writer.writerows(output_records)
 
-        for record in sorted(
-            output_records,
-            key=lambda r: (
-                r["project_split"],
-                r["retinopathy_grade"],
-                r["image_id"],
-            ),
-        ):
-
-            writer.writerow(
-                {
-                    field: record.get(field, "")
-                    for field in fieldnames
-                }
-            )
-
-    # ------------------------------------------------------------
-    # 9. Summary.
-    # ------------------------------------------------------------
-
-    print()
-    print("Project split generated:")
-    print(OUTPUT)
-
-    print()
-    print("Split counts:")
-    print(
-        f"  Train:       {len(train_records)}"
-    )
-    print(
-        f"  Validation:  {len(validation_records)}"
-    )
-    print(
-        f"  Excluded:    {len(excluded)}"
-    )
-    print(
-        f"  Total:       {len(output_records)}"
+    split_counts = Counter(
+        row["project_split"] for row in output_records
     )
 
-    print()
-    print("Training DR distribution:")
+    print("\nFinal split counts:")
+    print("Train:", split_counts["train"])
+    print("Validation:", split_counts["validation"])
 
-    train_distribution = Counter(
-        record["retinopathy_grade"]
-        for record in train_records
-    )
+    train_ids = {
+        row["image_id"] for row in output_records
+        if row["project_split"] == "train"
+    }
 
-    for grade in sorted(train_distribution):
-        print(
-            f"  Grade {grade}: "
-            f"{train_distribution[grade]}"
-        )
+    validation_ids = {
+        row["image_id"] for row in output_records
+        if row["project_split"] == "validation"
+    }
 
-    print()
-    print("Validation DR distribution:")
+    if train_ids.intersection(validation_ids):
+        raise ValueError("Train-validation leakage detected!")
 
-    validation_distribution = Counter(
-        record["retinopathy_grade"]
-        for record in validation_records
-    )
-
-    for grade in sorted(validation_distribution):
-        print(
-            f"  Grade {grade}: "
-            f"{validation_distribution[grade]}"
-        )
-
-    print()
-    print(f"Random seed: {SEED}")
-    print("Status: SUCCESS")
+    print("No train-validation leakage detected.")
+    print("\nOutput saved to:", OUTPUT_PATH)
+    print("IDRiD SPLIT GENERATION COMPLETE")
 
 
 if __name__ == "__main__":

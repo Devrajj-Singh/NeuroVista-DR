@@ -16,6 +16,7 @@ from .config import (
     BATCH_SIZE,
     CHECKPOINT_DIR,
     DATA_SPLIT_PATH,
+    IDRID_SPLIT_PATH,
     FREEZE_BACKBONE,
     IMAGE_SIZE,
     LEARNING_RATE,
@@ -27,39 +28,96 @@ from .config import (
     RESULTS_DIR,
     WEIGHT_DECAY,
 )
+
 from .dataset import APTOSDataset
-from .evaluate import evaluate_model, save_evaluation_results
+from .idrid_dataset import IDRiDDataset
+
+from .evaluate import (
+    evaluate_model,
+    save_evaluation_results,
+)
+
 from .model import build_model, get_device
+
 from .preprocessing import (
     get_train_transform,
     get_validation_transform,
 )
 
 
+# --------------------------------------------------
+# Reproducibility
+# --------------------------------------------------
+
 def set_seed(seed: int = RANDOM_SEED) -> None:
     """Set random seeds for reproducibility."""
 
     random.seed(seed)
+
     np.random.seed(seed)
+
     torch.manual_seed(seed)
 
     if torch.cuda.is_available():
         torch.cuda.manual_seed_all(seed)
 
 
-def calculate_class_weights(
-    dataset: APTOSDataset,
-) -> torch.Tensor:
+# --------------------------------------------------
+# Dataset selection
+# --------------------------------------------------
+
+def get_dataset_class(dataset_name: str):
+    """Return the dataset class for the selected dataset."""
+
+    dataset_name = dataset_name.lower()
+
+    if dataset_name == "aptos":
+        return APTOSDataset
+
+    if dataset_name == "idrid":
+        return IDRiDDataset
+
+    raise ValueError(
+        "Unsupported dataset. Choose 'aptos' or 'idrid'."
+    )
+
+
+def get_dataset_path(dataset_name: str) -> Path:
+    """Return the split CSV path for the selected dataset."""
+
+    dataset_name = dataset_name.lower()
+
+    if dataset_name == "aptos":
+        return DATA_SPLIT_PATH
+
+    if dataset_name == "idrid":
+        return IDRID_SPLIT_PATH
+
+    raise ValueError(
+        "Unsupported dataset. Choose 'aptos' or 'idrid'."
+    )
+
+
+# --------------------------------------------------
+# Class weights
+# --------------------------------------------------
+
+def calculate_class_weights(dataset) -> torch.Tensor:
     """Calculate inverse-frequency class weights."""
 
+    labels = dataset.data["diagnosis"].to_numpy(
+        dtype=int
+    )
+
     counts = np.bincount(
-        dataset.data["diagnosis"].to_numpy(),
+        labels,
         minlength=NUM_CLASSES,
     )
 
     if np.any(counts == 0):
         raise ValueError(
-            f"Training split is missing one or more classes: {counts}"
+            "Training split is missing one or more classes: "
+            f"{counts.tolist()}"
         )
 
     weights = len(dataset) / (
@@ -72,23 +130,56 @@ def calculate_class_weights(
     )
 
 
+# --------------------------------------------------
+# DataLoaders
+# --------------------------------------------------
+
 def create_dataloaders(
     batch_size: int = BATCH_SIZE,
     num_workers: int = NUM_WORKERS,
+    dataset_name: str = "idrid",
 ):
-    """Create training and validation dataloaders."""
+    """Create training and validation DataLoaders."""
 
-    train_dataset = APTOSDataset(
-        DATA_SPLIT_PATH,
+    dataset_name = dataset_name.lower()
+
+    dataset_class = get_dataset_class(
+        dataset_name
+    )
+
+    dataset_path = get_dataset_path(
+        dataset_name
+    )
+
+    print(
+        f"Loading dataset: {dataset_name.upper()}"
+    )
+
+    print(
+        f"Dataset split: {dataset_path}"
+    )
+
+    # Training dataset
+
+    train_dataset = dataset_class(
+        dataset_path,
         split="train",
-        transform=get_train_transform(IMAGE_SIZE),
+        transform=get_train_transform(
+            IMAGE_SIZE
+        ),
     )
 
-    validation_dataset = APTOSDataset(
-        DATA_SPLIT_PATH,
+    # Validation dataset
+
+    validation_dataset = dataset_class(
+        dataset_path,
         split="validation",
-        transform=get_validation_transform(IMAGE_SIZE),
+        transform=get_validation_transform(
+            IMAGE_SIZE
+        ),
     )
+
+    # Training DataLoader
 
     train_loader = DataLoader(
         train_dataset,
@@ -97,6 +188,8 @@ def create_dataloaders(
         num_workers=num_workers,
         pin_memory=torch.cuda.is_available(),
     )
+
+    # Validation DataLoader
 
     validation_loader = DataLoader(
         validation_dataset,
@@ -114,6 +207,10 @@ def create_dataloaders(
     )
 
 
+# --------------------------------------------------
+# Train one batch
+# --------------------------------------------------
+
 def train_one_batch(
     model: nn.Module,
     batch: dict,
@@ -121,23 +218,35 @@ def train_one_batch(
     optimizer: torch.optim.Optimizer,
     device: torch.device,
 ) -> float:
-    """Run one optimization step for smoke testing."""
+    """Run one optimization step."""
 
     model.train()
 
     images = batch["image"].to(device)
+
     labels = batch["diagnosis"].to(device)
 
-    optimizer.zero_grad(set_to_none=True)
+    optimizer.zero_grad(
+        set_to_none=True
+    )
 
     outputs = model(images)
-    loss = criterion(outputs, labels)
+
+    loss = criterion(
+        outputs,
+        labels,
+    )
 
     loss.backward()
+
     optimizer.step()
 
     return float(loss.item())
 
+
+# --------------------------------------------------
+# Training epoch
+# --------------------------------------------------
 
 def train_one_epoch(
     model: nn.Module,
@@ -151,27 +260,49 @@ def train_one_epoch(
     model.train()
 
     running_loss = 0.0
+
     total_samples = 0
 
     for batch in loader:
+
         images = batch["image"].to(device)
+
         labels = batch["diagnosis"].to(device)
 
-        optimizer.zero_grad(set_to_none=True)
+        optimizer.zero_grad(
+            set_to_none=True
+        )
 
         outputs = model(images)
-        loss = criterion(outputs, labels)
+
+        loss = criterion(
+            outputs,
+            labels,
+        )
 
         loss.backward()
+
         optimizer.step()
 
         batch_size = images.size(0)
 
-        running_loss += loss.item() * batch_size
+        running_loss += (
+            loss.item() * batch_size
+        )
+
         total_samples += batch_size
+
+    if total_samples == 0:
+        raise ValueError(
+            "Training DataLoader contains no samples."
+        )
 
     return running_loss / total_samples
 
+
+# --------------------------------------------------
+# Validation loss
+# --------------------------------------------------
 
 @torch.no_grad()
 def validation_loss(
@@ -185,22 +316,41 @@ def validation_loss(
     model.eval()
 
     running_loss = 0.0
+
     total_samples = 0
 
     for batch in loader:
+
         images = batch["image"].to(device)
+
         labels = batch["diagnosis"].to(device)
 
         outputs = model(images)
-        loss = criterion(outputs, labels)
+
+        loss = criterion(
+            outputs,
+            labels,
+        )
 
         batch_size = images.size(0)
 
-        running_loss += loss.item() * batch_size
+        running_loss += (
+            loss.item() * batch_size
+        )
+
         total_samples += batch_size
+
+    if total_samples == 0:
+        raise ValueError(
+            "Validation DataLoader contains no samples."
+        )
 
     return running_loss / total_samples
 
+
+# --------------------------------------------------
+# Save checkpoint
+# --------------------------------------------------
 
 def save_checkpoint(
     model: nn.Module,
@@ -210,7 +360,7 @@ def save_checkpoint(
     config: dict,
     path: Path,
 ) -> None:
-    """Save a model checkpoint with experiment metadata."""
+    """Save model checkpoint and metadata."""
 
     path.parent.mkdir(
         parents=True,
@@ -236,26 +386,90 @@ def save_checkpoint(
     )
 
 
+# --------------------------------------------------
+# Main training pipeline
+# --------------------------------------------------
+
 def train(
     epochs: int = NUM_EPOCHS,
     batch_size: int = BATCH_SIZE,
     learning_rate: float = LEARNING_RATE,
     pretrained: bool = PRETRAINED,
     freeze_backbone: bool = FREEZE_BACKBONE,
+    dataset_name: str = "idrid",
 ) -> dict:
-    """Run the baseline ICDR classifier training."""
+    """Train and evaluate the ICDR classifier."""
+
+    dataset_name = dataset_name.lower()
+
+    if epochs < 1:
+        raise ValueError(
+            "Epochs must be greater than zero."
+        )
+
+    if batch_size < 1:
+        raise ValueError(
+            "Batch size must be greater than zero."
+        )
+
+    if learning_rate <= 0:
+        raise ValueError(
+            "Learning rate must be greater than zero."
+        )
+
+    dataset_path = get_dataset_path(
+        dataset_name
+    )
 
     set_seed()
 
     device = get_device()
 
-    print(f"Device: {device}")
-    print(f"Dataset split: {DATA_SPLIT_PATH}")
-    print(f"Image size: {IMAGE_SIZE}")
-    print(f"Batch size: {batch_size}")
-    print(f"Epochs: {epochs}")
-    print(f"Pretrained: {pretrained}")
-    print(f"Frozen backbone: {freeze_backbone}")
+    print("=" * 50)
+
+    print("NeuroVista-DR Training")
+
+    print("=" * 50)
+
+    print(
+        f"Dataset: {dataset_name.upper()}"
+    )
+
+    print(
+        f"Device: {device}"
+    )
+
+    print(
+        f"Dataset split: {dataset_path}"
+    )
+
+    print(
+        f"Image size: {IMAGE_SIZE}"
+    )
+
+    print(
+        f"Batch size: {batch_size}"
+    )
+
+    print(
+        f"Epochs: {epochs}"
+    )
+
+    print(
+        f"Learning rate: {learning_rate}"
+    )
+
+    print(
+        f"Pretrained: {pretrained}"
+    )
+
+    print(
+        f"Frozen backbone: {freeze_backbone}"
+    )
+
+    # ----------------------------------------------
+    # Load datasets
+    # ----------------------------------------------
 
     (
         train_dataset,
@@ -263,11 +477,23 @@ def train(
         train_loader,
         validation_loader,
     ) = create_dataloaders(
-        batch_size=batch_size
+        batch_size=batch_size,
+        dataset_name=dataset_name,
     )
 
-    print(f"Training samples: {len(train_dataset)}")
-    print(f"Validation samples: {len(validation_dataset)}")
+    print(
+        f"Training samples: "
+        f"{len(train_dataset)}"
+    )
+
+    print(
+        f"Validation samples: "
+        f"{len(validation_dataset)}"
+    )
+
+    # ----------------------------------------------
+    # Class weights
+    # ----------------------------------------------
 
     class_weights = calculate_class_weights(
         train_dataset
@@ -278,15 +504,27 @@ def train(
         class_weights.detach().cpu().numpy(),
     )
 
+    # ----------------------------------------------
+    # Build model
+    # ----------------------------------------------
+
     model = build_model(
         num_classes=NUM_CLASSES,
         pretrained=pretrained,
         freeze_backbone=freeze_backbone,
     ).to(device)
 
+    # ----------------------------------------------
+    # Loss function
+    # ----------------------------------------------
+
     criterion = nn.CrossEntropyLoss(
         weight=class_weights
     )
+
+    # ----------------------------------------------
+    # Optimizer
+    # ----------------------------------------------
 
     trainable_parameters = [
         parameter
@@ -294,21 +532,54 @@ def train(
         if parameter.requires_grad
     ]
 
+    if not trainable_parameters:
+        raise ValueError(
+            "Model has no trainable parameters."
+        )
+
     optimizer = AdamW(
         trainable_parameters,
         lr=learning_rate,
         weight_decay=WEIGHT_DECAY,
     )
 
+    # ----------------------------------------------
+    # Learning rate scheduler
+    # ----------------------------------------------
+
     scheduler = CosineAnnealingLR(
         optimizer,
         T_max=max(epochs, 2),
     )
 
+    # ----------------------------------------------
+    # Output paths
+    # ----------------------------------------------
+
+    checkpoint_path = (
+        CHECKPOINT_DIR
+        / f"efficientnet_b0_{dataset_name}_best.pt"
+    )
+
+    metrics_path = (
+        RESULTS_DIR
+        / f"{dataset_name}_best_validation_metrics.json"
+    )
+
+    history_path = (
+        RESULTS_DIR
+        / f"{dataset_name}_training_history.json"
+    )
+
+    # ----------------------------------------------
+    # Training history
+    # ----------------------------------------------
+
     best_validation_loss = float("inf")
 
     history = {
         "config": {
+            "dataset": dataset_name,
             "seed": RANDOM_SEED,
             "image_size": IMAGE_SIZE,
             "batch_size": batch_size,
@@ -319,40 +590,45 @@ def train(
             "freeze_backbone": freeze_backbone,
             "optimizer": "AdamW",
             "scheduler": "CosineAnnealingLR",
-            "dataset_split": str(DATA_SPLIT_PATH),
+            "dataset_split": str(dataset_path),
             "device": str(device),
         },
         "epochs": [],
     }
 
-    for epoch in range(1, epochs + 1):
+    # ----------------------------------------------
+    # Epoch loop
+    # ----------------------------------------------
 
-        # -------------------------
+    for epoch in range(
+        1,
+        epochs + 1,
+    ):
+
+        print(
+            f"\nEpoch {epoch}/{epochs}"
+        )
+
         # Training
-        # -------------------------
 
         train_loss = train_one_epoch(
-            model,
-            train_loader,
-            criterion,
-            optimizer,
-            device,
+            model=model,
+            loader=train_loader,
+            criterion=criterion,
+            optimizer=optimizer,
+            device=device,
         )
 
-        # -------------------------
         # Validation loss
-        # -------------------------
 
         val_loss = validation_loss(
-            model,
-            validation_loader,
-            criterion,
-            device,
+            model=model,
+            loader=validation_loader,
+            criterion=criterion,
+            device=device,
         )
 
-        # -------------------------
-        # Validation metrics
-        # -------------------------
+        # Evaluation metrics
 
         evaluation = evaluate_model(
             model=model,
@@ -361,31 +637,42 @@ def train(
             referable_threshold=2,
         )
 
+        # Update learning rate
+
         scheduler.step()
 
         current_lr = optimizer.param_groups[0]["lr"]
 
-        classification = evaluation["classification"]
-        referable = evaluation["referable_dr"]
+        classification = evaluation[
+            "classification"
+        ]
+
+        referable = evaluation[
+            "referable_dr"
+        ]
+
+        # ------------------------------------------
+        # Print metrics
+        # ------------------------------------------
 
         print(
-            f"\nEpoch {epoch}/{epochs}"
+            f"  train_loss: "
+            f"{train_loss:.4f}"
         )
 
         print(
-            f"  train_loss: {train_loss:.4f}"
+            f"  val_loss: "
+            f"{val_loss:.4f}"
         )
 
         print(
-            f"  val_loss:   {val_loss:.4f}"
+            f"  accuracy: "
+            f"{classification['accuracy']:.4f}"
         )
 
         print(
-            f"  accuracy:   {classification['accuracy']:.4f}"
-        )
-
-        print(
-            f"  macro_f1:   {classification['macro_f1']:.4f}"
+            f"  macro_f1: "
+            f"{classification['macro_f1']:.4f}"
         )
 
         print(
@@ -399,8 +686,13 @@ def train(
         )
 
         print(
-            f"  learning_rate: {current_lr:.6f}"
+            f"  learning_rate: "
+            f"{current_lr:.6f}"
         )
+
+        # ------------------------------------------
+        # Save epoch history
+        # ------------------------------------------
 
         epoch_record = {
             "epoch": epoch,
@@ -410,13 +702,16 @@ def train(
             "evaluation": evaluation,
         }
 
-        history["epochs"].append(epoch_record)
+        history["epochs"].append(
+            epoch_record
+        )
 
-        # -------------------------
+        # ------------------------------------------
         # Save best checkpoint
-        # -------------------------
+        # ------------------------------------------
 
         if val_loss < best_validation_loss:
+
             best_validation_loss = val_loss
 
             save_checkpoint(
@@ -425,60 +720,67 @@ def train(
                 epoch=epoch,
                 validation_loss_value=val_loss,
                 config=history["config"],
-                path=CHECKPOINT_DIR
-                / "efficientnet_b0_best.pt",
+                path=checkpoint_path,
             )
 
             save_evaluation_results(
                 evaluation,
-                RESULTS_DIR
-                / "best_validation_metrics.json",
+                metrics_path,
             )
 
             print(
-                "  ✓ Best checkpoint updated"
+                "  Best checkpoint updated"
             )
 
-    # -------------------------
-    # Save complete history
-    # -------------------------
+    # ----------------------------------------------
+    # Save complete training history
+    # ----------------------------------------------
 
     RESULTS_DIR.mkdir(
         parents=True,
         exist_ok=True,
     )
 
-    history_path = (
-        RESULTS_DIR / "training_history.json"
-    )
-
     with history_path.open(
         "w",
         encoding="utf-8",
     ) as file:
+
         json.dump(
             history,
             file,
             indent=2,
         )
 
+    # ----------------------------------------------
+    # Final output
+    # ----------------------------------------------
+
     print(
-        f"\nBest checkpoint:"
-        f"\n  {CHECKPOINT_DIR / 'efficientnet_b0_best.pt'}"
+        "\nTraining completed"
     )
 
     print(
-        f"Training history:"
-        f"\n  {history_path}"
+        f"Best checkpoint:\n"
+        f"  {checkpoint_path}"
     )
 
     print(
-        f"Best validation metrics:"
-        f"\n  {RESULTS_DIR / 'best_validation_metrics.json'}"
+        f"Training history:\n"
+        f"  {history_path}"
+    )
+
+    print(
+        f"Best validation metrics:\n"
+        f"  {metrics_path}"
     )
 
     return history
 
+
+# --------------------------------------------------
+# Command-line arguments
+# --------------------------------------------------
 
 def parse_args():
     """Parse command-line training arguments."""
@@ -488,6 +790,16 @@ def parse_args():
             "Train the NeuroVista-DR "
             "EfficientNet-B0 ICDR classifier."
         )
+    )
+
+    parser.add_argument(
+        "--dataset",
+        choices=[
+            "aptos",
+            "idrid",
+        ],
+        default="idrid",
+        help="Dataset to train on.",
     )
 
     parser.add_argument(
@@ -521,7 +833,12 @@ def parse_args():
     return parser.parse_args()
 
 
+# --------------------------------------------------
+# Entry point
+# --------------------------------------------------
+
 if __name__ == "__main__":
+
     args = parse_args()
 
     train(
@@ -530,4 +847,5 @@ if __name__ == "__main__":
         learning_rate=args.learning_rate,
         pretrained=not args.no_pretrained,
         freeze_backbone=not args.unfreeze_backbone,
+        dataset_name=args.dataset,
     )
